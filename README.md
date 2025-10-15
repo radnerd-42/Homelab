@@ -13,3 +13,7 @@ power_brick_mount.stl - This is a panel that is meant to hold power bricks for t
 power_strip_mount.stl - This is a panel that will take screws to mount a power strip to plug everything into.
 
 switch_shelf.stl - This is specifically designed for switches like the NETGEAR GS308EP POE switch. Easily modified, but purpose built for now.
+
+pi_caddy.stl - This is a caddy for Pi SBC's for use with the shelf here. This is a modification of the caddy available from RFX01 at https://www.thingiverse.com/thing:4517415/files
+
+pic_shelf.stl - This is a shelf that will hold 3 of the caddy's above. The height allows for hats on the Pi's, like POE hats so things can be accessed from the front.
