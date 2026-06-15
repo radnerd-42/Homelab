@@ -16,13 +16,21 @@
 - Remove the CD, and you're done
 - Export from your current hypervisor, or do whatever you were going to do
 
-2. Export VM images (VMWare Workstation) to move to Proxmox
+2. Shrink the drive itself
+- In the Proxmox CLI:
+    lvresize -L \<size you want\> /dev/\<pve or the name of your storage\>/vm-\<VMID\>-disk-\<DISK#\>
+    nano /etc/pve/qemu-server/\<VMID\>.conf
+    - adjust line `scsi0: local-lvm:vm-100-disk-0,size=50G` to match the size you just changed it to, and make sure to add the size if it's not there
+    - save and exit
+- Verify, start the VM and verify 
+
+3. Export VM images (VMWare Workstation) to move to Proxmox
 - Load the VM into VMWare
 - Select the VM, click File, and select Export to OVF...
 - Move the files (all of them) you exported to your hypervisor
 - run the command `qm importovf <VMid> <exported>.ovf <your-storage> && qm importdisk <VMid> <exported>.vmdk <your-storage>`
 
-3. Importing a Windows machine requires more, set things up as below:
+4. Importing a Windows machine requires more, set things up as below:
 - SCSI Controller - VMware PVSCSI
 - Leave hard disks alone
 - Network Device - vmxnet
