@@ -6,7 +6,7 @@ This is how I got things working, starting with updates for the necessary Python
 # Necessary updates 
 
 sudo apt-get update
-sudo apt-get install -y cmake python3 build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi git
+sudo apt-get install -y cmake python3 build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi git  
 cd ~
 
 # Get the Pico-SDK, and update it
@@ -37,7 +37,7 @@ git submodule update --init --recursive
 mkdir -p build
 cd build
 PICO_SDK_PATH=<path to pico-sdk>
-cmake .. -DPICO_BOARD=pico DUSB_VID=<VID for your use> -DUSB_PID=<PID for your use> # the IDs tell the software tools what your key is, you need to determine and identify what those IDs are.
+cmake .. -DPICO_BOARD=pico DUSB_VID=<VID for your use> -DUSB_PID=<PID for your use> # the IDs tell the software tools what your key is, you need to determine and identify what those IDs are.  
 make
 
 # Your .uf2 should be in the build/ directory
