@@ -2,7 +2,7 @@ I was very interested in setting up a certificate authority for my homelab, and 
 For a while I struggled to get a Picokey setup based on the [instructions](https://github.com/polhenarejos/pico-fido) they provided on Github. I tried using a Waveshare RP2350-One dev board in this process, and had to troubleshoot a bit to get it working.
 This is how I got things working, starting with updates for the necessary Python libraries, the Pico-SDK, Picotool, and finally the Picokey build itself. 
 
-'''
+```
 # Necessary updates 
 
 sudo apt-get update
@@ -41,6 +41,5 @@ cmake .. -DPICO_BOARD=pico DUSB_VID=<VID for your use> -DUSB_PID=<PID for your u
 make
 
 # Your .uf2 should be in the build/ directory
-'''
-
+```
 Once you have your .uf2, load it onto your dev board. For the RP2350-One I used, press and hold the boot button (on the left with the USB plug held away from you), and plug it into your computer. It should load as a drive, and you can then copy the .uf2 onto. Eject, and plug it back in, and you are good to go.
