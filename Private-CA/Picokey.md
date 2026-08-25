@@ -15,6 +15,7 @@ git clone https://github.com/raspberrypi/pico-sdk.git
 cd pico-sdk
 git submodule update --init --recursive
 cd ~
+PICO_SDK_PATH=<path to pico-sdk>
 
 # Get the Picotool, and ensure it matches the needed version
 
@@ -36,7 +37,6 @@ cd pico-fido
 git submodule update --init --recursive
 mkdir -p build
 cd build
-PICO_SDK_PATH=<path to pico-sdk>
 cmake .. -DPICO_BOARD=pico DUSB_VID=<VID for your use> -DUSB_PID=<PID for your use> # the IDs tell the software tools what your key is, you need to determine and identify what those IDs are.  
 make
 
