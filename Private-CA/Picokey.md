@@ -35,9 +35,10 @@ cd ~
 git clone https://github.com/polhenarejos/pico-fido.git
 cd pico-fido
 git submodule update --init --recursive
+# if you have a different PID/VID to use, edit the values on lines 20-21 in the CMakeLists.txt file in this directory
 mkdir -p build
 cd build
-cmake .. -DPICO_BOARD=pico DUSB_VID=<VID for your use> -DUSB_PID=<PID for your use> # the IDs tell the software tools what your key is, you need to determine and identify what those IDs are.  
+cmake .. -DPICO_BOARD=pico # Use pico for an RP2040 or pico2 for an RP2350  
 make
 
 # Your .uf2 should be in the build/ directory
