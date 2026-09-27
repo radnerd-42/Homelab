@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Rack Layout Designer (True-to-Size Heights)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        accent: '#3b82f6',
+                        accenthover: '#2563eb'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .rack-shadow {
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5), inset 0 2px 4px 0 rgb(255 255 255 / 0.05);
+        }
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+
+        /* Printer-friendly styling: converts dark mode screen elements into crisp, high-contrast light theme for paper/PDF output */
+        /* Print-specific styles */
+        @media print {
+                /* YOUR NEW CODE GOES HERE */
+                /* 1. FORCE LIGHT MODE FOR PRINT */
+                body, #print-wrapper, .bg-cardbg, .bg-darkbg, .bg-slate-900, 
+                .bg-slate-800, .bg-slate-950, .bg-black\/30, .bg-black\/40 {
+                    background-color: #ffffff !important;
+                    background: #ffffff !important;
+                    color: #000000 !important;
+                }
+
+                /* Force text colors to be black for all items */
+                .text-white, .text-slate-100, .text-slate-200, 
+                .text-slate-300, .text-slate-400, .text-slate-500, 
+                .text-slate-600, .text-slate-700 {
+                    color: #000000 !important;
+                }
+
+                /* Ensure borders are visible but not 'dark' (standard grey) */
+                .border-slate-800, .border-slate-900, .border-slate-700 {
+                    border-color: #d1d5db !important; 
+                }
+
+                /* 2. HIDE UI ELEMENTS */
+                #libraryContainer, 
+                .lg\:col-span-5, 
+                .no-print, 
+                button, 
+                nav, 
+                footer {
+                    display: none !important;
+                }
+
+                /* 3. LAYOUT FIXES FOR PRINT */
+                #print-wrapper {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+
+                #printTargetContainer {
+                    width: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+            }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+
+    <header class="bg-cardbg border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-500/30 flex items-center justify-center">
+                    <i data-lucide="server" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        RackStack <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium border border-blue-500/30">Pro True-Height</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Datacenter & SOHO Rack Designer (7", 10", 19" Standards)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="app.loadSampleRack()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Load Sample Rack
+                </button>
+                <button onclick="app.openExportModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-blue-400"></i> Export / Import
+                </button>
+                <button onclick="app.triggerPrint()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="printer" class="w-3.5 h-3.5 text-emerald-400"></i> Print Layout
+                </button>
+                <button onclick="app.clearRack()" class="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/50 text-red-300 text-xs font-medium rounded-lg border border-red-800/50 transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Rack
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Rack Configuration & Library -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Rack Setup Card -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <h2 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> Rack Configuration
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Rack Name (Updates Title Dynamically)</label>
+                        <input type="text" id="rackNameInput" oninput="app.updateRackMeta(this.value)" value="SOHO Mini & Pi Lab" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Rack Standard / Width</label>
+                            <select id="rackStandardSelect" onchange="app.changeRackStandard(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition">
+                                <option value="19">19" Standard (Enterprise)</option>
+                                <option value="10" selected>10" Mini / SOHO Rack</option>
+                                <option value="7">7" Ultra-Compact Rack</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Height (U Precision)</label>
+                            <select id="rackHeightSelect" onchange="app.changeRackHeight(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition">
+                                <option value="4">4U</option>
+                                <option value="4.5">4.5U</option>
+                                <option value="5">5U</option>
+                                <option value="5.5">5.5U</option>
+                                <option value="6">6U</option>
+                                <option value="6.5">6.5U</option>
+                                <option value="7">7U</option>
+                                <option value="7.5">7.5U</option>
+                                <option value="8">8U</option>
+                                <option value="8.5">8.5U</option>
+                                <option value="9" selected>9U (Standard 10")</option>
+                                <option value="9.5">9.5U</option>
+                                <option value="10">10U</option>
+                                <option value="11">11U</option>
+                                <option value="12">12U</option>
+                                <option value="15">15U</option>
+                                <option value="24">24U</option>
+                                <option value="42">42U (Enterprise)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div>
+                            <span class="text-xs text-slate-300 font-medium block">Numbering Direction</span>
+                            <span class="text-[10px] text-slate-500">Top-down or Bottom-up U labeling</span>
+                        </div>
+                        <button onclick="app.toggleNumberingOrder()" id="numberingBtn" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-lg text-slate-300 border border-slate-700 transition">
+                            Top (1) → Bottom
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Library -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="package-plus" class="w-4 h-4 text-emerald-400"></i> Equipment Library
+                    </h2>
+                    <button onclick="app.openEquipmentModal()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition flex items-center gap-1 shadow-lg shadow-blue-500/20">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Custom Device
+                    </button>
+                </div>
+
+                <p class="text-xs text-slate-400 mb-3">Drag items into rack slots. All details render directly inside the visual blocks!</p>
+
+                <div id="libraryContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Rack Stats -->
+            <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 shadow-xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-slate-800 text-blue-400">
+                        <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">Rack Capacity Used</div>
+                        <div id="rackCapacityText" class="text-sm font-bold text-slate-200">0U / 9U (0%)</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 font-medium">Installed Devices</div>
+                    <div id="rackDeviceCount" class="text-sm font-bold text-slate-200">0 units</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Rack Visualizer Canvas -->
+        <div class="lg:col-span-7">
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl relative min-h-[600px] flex flex-col">
+                
+                <!-- Rack Top Bar Header -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
+                    <div>
+                        <h3 id="displayRackName" class="text-base font-bold text-white flex items-center gap-2">
+                            SOHO Mini & Pi Lab <span id="displayRackStandard" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">10" Rack</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">With complete device metadata rendered directly inside U slots</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center gap-1.5 text-xs text-slate-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Ready
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Physical Rack Elevation Canvas -->
+                <div class="flex-1 flex justify-center pb-4">
+                    <div id="rackFrame" class="w-full max-w-lg bg-slate-950 rounded-xl border-4 border-slate-800 rack-shadow p-3 relative flex flex-col">
+                        
+                        <!-- Rack Ears Top Header -->
+                        <div class="flex justify-between items-center text-[10px] font-mono text-slate-500 px-2 pb-2 border-b border-slate-900">
+                            <span>[ LEFT EAR ]</span>
+                            <span id="rackStandardHeaderLabel" class="text-blue-400 font-bold uppercase">10-Inch Mini Rack Elevation</span>
+                            <span>[ RIGHT EAR ]</span>
+                        </div>
+
+                        <!-- Rack Units Container -->
+                        <div id="rackUnitsList" class="flex-1 flex flex-col gap-1 my-2">
+                            <!-- Populated dynamically via JavaScript -->
+                        </div>
+
+                        <!-- Rack Bottom Footer -->
+                        <div class="flex justify-between items-center text-[10px] font-mono text-slate-500 px-2 pt-2 border-t border-slate-900">
+                            <span>PWR: AC 120V/230V</span>
+                            <span>GROUNDED</span>
+                            <span>TEMP: 28°C</span>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <div id="print-wrapper" class="hidden">
+        <div id="printTargetContainer"></div>
+    </div>
+
+    <div id="equipmentModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-cardbg border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <h3 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="server" class="w-5 h-5 text-blue-400"></i> Configure Equipment
+                </h3>
+                <button onclick="app.closeEquipmentModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="equipmentForm" onsubmit="app.saveEquipmentForm(event)" class="space-y-4">
+                <input type="hidden" id="editEquipmentId">
+                <input type="hidden" id="targetSlotU">
+                <input type="hidden" id="targetSlotCol" value="0">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Equipment Name *</label>
+                    <input type="text" id="eqName" required placeholder="e.g. 2U Tower Server / UPS" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Model / Brand</label>
+                        <input type="text" id="eqModel" placeholder="e.g. Custom 2U Enclosure" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Height (U Precision)</label>
+                        <select id="eqHeight" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="0.5">0.5U (Half-U)</option>
+                            <option value="1" selected>1U (Standard)</option>
+                            <option value="1.5">1.5U</option>
+                            <option value="2">2U (Spans 2 full slots)</option>
+                            <option value="2.5">2.5U</option>
+                            <option value="3">3U (Spans 3 full slots)</option>
+                            <option value="4">4U (Spans 4 full slots)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Width Span</label>
+                        <select id="eqWidth" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="100">Full Width (100%)</option>
+                            <option value="50">Half Width (50% - e.g. Mini PC)</option>
+                            <option value="33">Third Width (33%)</option>
+                            <option value="25">Quarter Width (25%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Panel Color</label>
+                        <select id="eqColor" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="slate">Dark Slate (Standard)</option>
+                            <option value="blue">Deep Blue (Network / Switch)</option>
+                            <option value="emerald">Emerald Green (Servers / Pi)</option>
+                            <option value="amber">Amber / Gold (Storage / NAS)</option>
+                            <option value="purple">Purple (Management / PDU)</option>
+                            <option value="zinc">Silver / Brushed Zinc</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Primary IP Address</label>
+                        <input type="text" id="eqIp" placeholder="e.g. 192.168.1.50" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Subnet / VLAN</label>
+                        <input type="text" id="eqSubnet" placeholder="e.g. 192.168.1.0/24 (VLAN 10)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Management URL / Web UI</label>
+                    <input type="url" id="eqUrl" placeholder="https://192.168.1.50:8443" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Purpose / Notes</label>
+                    <textarea id="eqNotes" rows="2" placeholder="Describe role, hardware specs, containers running..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-medium text-slate-300">Sub-devices / Cluster Nodes (Optional)</label>
+                        <button type="button" onclick="app.addSubItemField()" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Add Sub-node
+                        </button>
+                    </div>
+                    <div id="subItemsContainer" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        <!-- Dynamic sub-item input rows -->
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="app.closeEquipmentModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition shadow-lg shadow-blue-500/20">
+                        Save Equipment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="inspectModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-cardbg border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i> Equipment Details
+                </h3>
+                <button onclick="app.closeInspectModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div id="inspectContent" class="space-y-4 text-sm">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-800">
+                <button id="inspectEditBtn" onclick="" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl transition flex items-center gap-1.5">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-400"></i> Edit Equipment
+                </button>
+                <button id="inspectDeleteBtn" onclick="" class="px-3 py-1.5 bg-red-950/50 hover:bg-red-900/60 text-red-300 text-xs font-medium rounded-xl transition flex items-center gap-1.5 border border-red-800/40">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Remove from Rack
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-cardbg border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="download-cloud" class="w-5 h-5 text-blue-400"></i> Export & Import Configuration
+                </h3>
+                <button onclick="app.closeExportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Rack JSON Data</label>
+                    <textarea id="exportJsonArea" rows="6" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-slate-800">
+                    <button onclick="app.downloadJsonFile()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/20">
+                        <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download .json File
+                    </button>
+                    <label class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="file-up" class="w-3.5 h-3.5 text-blue-400"></i> Upload .json File
+                        <input type="file" accept=".json" onchange="app.uploadJsonFile(event)" class="hidden">
+                    </label>
+                    <button onclick="app.importJsonData()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i> Load from Text
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RackApp {
+            constructor() {
+                this.rack = {
+                    name: "SOHO Mini & Pi Lab",
+                    standard: "10",
+                    height: 9,
+                    numberingAsc: true,
+                    items: {}
+                };
+
+                this.library = [
+                    {
+                        id: 'tpl_2u_nas',
+                        name: '2U NAS / Storage Enclosure',
+                        model: '8-Bay Rackmount Case',
+                        height: 2,
+                        width: 100,
+                        color: 'amber',
+                        ip: '192.168.1.100',
+                        subnet: '192.168.1.0/24',
+                        url: 'https://192.168.1.100',
+                        notes: 'True 2U height storage server with ZFS pool.',
+                        subItems: []
+                    },
+                    {
+                        id: 'tpl_half_u_pdu',
+                        name: '0.5U Micro PDU / Power Strip',
+                        model: 'Slim 4-Outlet Rack PDU',
+                        height: 0.5,
+                        width: 100,
+                        color: 'purple',
+                        ip: '192.168.1.3',
+                        subnet: '192.168.1.0/24',
+                        url: 'http://192.168.1.3',
+                        notes: 'Smart monitored power strip occupying a half-U slot.',
+                        subItems: []
+                    },
+                    {
+                        id: 'tpl_mini_pc',
+                        name: 'Mini PC (Proxmox/HomeServer)',
+                        model: 'Beelink SER5 / Minisforum',
+                        height: 1,
+                        width: 50,
+                        color: 'blue',
+                        ip: '192.168.1.50',
+                        subnet: '192.168.1.0/24',
+                        url: 'https://192.168.1.50:8006',
+                        notes: 'Runs Proxmox VE with Home Assistant and Pi-hole VMs.',
+                        subItems: []
+                    },
+                    {
+                        id: 'tpl_soho_switch',
+                        name: '5-Port / 8-Port SOHO Switch',
+                        model: 'Netgear / TP-Link Managed 1GbE',
+                        height: 1,
+                        width: 100,
+                        color: 'slate',
+                        ip: '192.168.1.2',
+                        subnet: '192.168.1.0/24',
+                        url: 'http://192.168.1.2',
+                        notes: 'Core switch connecting Mini PCs, Pi cluster, and uplink.',
+                        subItems: []
+                    },
+                    {
+                        id: 'tpl_pi_cluster',
+                        name: '1U 5x Raspberry Pi Rack Shelf',
+                        model: 'Custom 3D Printed 1U Mount',
+                        height: 1,
+                        width: 100,
+                        color: 'emerald',
+                        ip: '192.168.1.10',
+                        subnet: '192.168.1.0/24',
+                        url: 'http://192.168.1.10',
+                        notes: 'Cluster of 5 rotated Raspberry Pis for Kubernetes/Docker.',
+                        subItems: [
+                            { name: 'pi-master-01', ip: '192.168.1.10', role: 'K3s Control' },
+                            { name: 'pi-worker-01', ip: '192.168.1.11', role: 'Worker' },
+                            { name: 'pi-worker-02', ip: '192.168.1.12', role: 'Worker' },
+                            { name: 'pi-worker-03', ip: '192.168.1.13', role: 'Worker' },
+                            { name: 'pi-nas-node',  ip: '192.168.1.14', role: 'Storage' }
+                        ]
+                    }
+                ];
+
+                this.init();
+            }
+
+            init() {
+                this.loadFromLocalStorage();
+                this.renderLibrary();
+                this.renderRack();
+                this.updateStats();
+                lucide.createIcons();
+            }
+
+            saveToLocalStorage() {
+                localStorage.setItem('rackstack_data_v8', JSON.stringify(this.rack));
+            }
+
+            loadFromLocalStorage() {
+                const data = localStorage.getItem('rackstack_data_v8');
+                if (data) {
+                    try {
+                        this.rack = JSON.parse(data);
+                        document.getElementById('rackNameInput').value = this.rack.name || "SOHO Mini & Pi Lab";
+                        document.getElementById('rackStandardSelect').value = this.rack.standard || "10";
+                        document.getElementById('rackHeightSelect').value = this.rack.height || 9;
+                        this.updateRackMeta(this.rack.name);
+                        this.updateNumberingButtonUI();
+                        return;
+                    } catch (e) {
+                        console.error("Failed to load local storage", e);
+                    }
+                }
+                this.loadSampleRackData();
+            }
+
+            loadSampleRackData() {
+                this.rack = {
+                    name: "SOHO Mini & Pi Lab",
+                    standard: "10",
+                    height: 9,
+                    numberingAsc: true,
+                    items: {
+                        "0.5_0": { id: 'eq_05', name: '0.5U Micro PDU', model: 'Slim 4-Outlet', height: 0.5, width: 100, color: 'purple', ip: '192.168.1.3', subnet: '192.168.1.0/24', url: 'http://192.168.1.3', notes: 'Mounted in top half-U slot.', subItems: [] },
+                        "1_0": { id: 'eq_1', name: 'Keystone RJ45 Patch Panel', model: '12-Port Cat6', height: 1, width: 100, color: 'zinc', ip: '', subnet: '', url: '', notes: 'Terminating room ethernet drops.', subItems: [] },
+                        "2_0": { id: 'eq_2', name: '5-Port SOHO Switch', model: 'Netgear 1GbE Managed', height: 1, width: 100, color: 'blue', ip: '192.168.1.2', subnet: '192.168.1.0/24', url: 'http://192.168.1.2', notes: 'Core switch for lab devices.', subItems: [] },
+                        "3_0": { id: 'eq_3', name: 'Mini PC (Proxmox Server)', model: 'Beelink SER5', height: 1, width: 50, color: 'blue', ip: '192.168.1.50', subnet: '192.168.1.0/24', url: 'https://192.168.1.50:8006', notes: 'Main virtualization host.', subItems: [] },
+                        "3_1": { id: 'eq_3b', name: 'Mini PC (TrueNAS SCALE)', model: 'Minisforum N100', height: 1, width: 50, color: 'amber', ip: '192.168.1.51', subnet: '192.168.1.0/24', url: 'https://192.168.1.51', notes: 'NAS storage node.', subItems: [] },
+                        "4_0": { id: 'eq_4', name: '1U 5x Raspberry Pi Shelf', model: '3D Printed Rack Mount', height: 1, width: 100, color: 'emerald', ip: '192.168.1.10', subnet: '192.168.1.0/24', url: 'http://192.168.1.10', notes: 'Pi 4/5 Kubernetes cluster.', subItems: [
+                            { name: 'pi-master-01', ip: '192.168.1.10', role: 'K3s Control' },
+                            { name: 'pi-worker-01', ip: '192.168.1.11', role: 'Worker' }
+                        ]}
+                    }
+                };
+            }
+
+            loadSampleRack() {
+                this.loadSampleRackData();
+                document.getElementById('rackNameInput').value = this.rack.name;
+                document.getElementById('rackStandardSelect').value = this.rack.standard;
+                document.getElementById('rackHeightSelect').value = this.rack.height;
+                this.updateRackMeta(this.rack.name);
+                this.saveToLocalStorage();
+                this.renderRack();
+                this.updateStats();
+            }
+
+            clearRack() {
+                if (confirm("Are you sure you want to clear all equipment from this rack?")) {
+                    this.rack.items = {};
+                    this.saveToLocalStorage();
+                    this.renderRack();
+                    this.updateStats();
+                }
+            }
+
+            updateRackMeta(nameVal) {
+                this.rack.name = nameVal || "Server Rack";
+                const titleSpan = document.getElementById('displayRackName');
+                if (titleSpan) {
+                    titleSpan.innerHTML = `${this.rack.name} <span id="displayRackStandard" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">${this.rack.standard}" Rack</span>`;
+                }
+                this.saveToLocalStorage();
+            }
+
+            changeRackStandard(val) {
+                this.rack.standard = val;
+                this.saveToLocalStorage();
+                this.renderRack();
+                const stdSpan = document.getElementById('displayRackStandard');
+                if (stdSpan) stdSpan.innerText = `${val}" Rack`;
+                const headerLabel = document.getElementById('rackStandardHeaderLabel');
+                if (headerLabel) headerLabel.innerText = `${val}-Inch ${val === '19' ? 'Enterprise' : val === '10' ? 'Mini SOHO' : 'Ultra-Compact'} Rack Elevation`;
+            }
+
+            changeRackHeight(val) {
+                this.rack.height = parseFloat(val);
+                this.saveToLocalStorage();
+                this.renderRack();
+                this.updateStats();
+            }
+
+            toggleNumberingOrder() {
+                this.rack.numberingAsc = !this.rack.numberingAsc;
+                this.updateNumberingButtonUI();
+                this.saveToLocalStorage();
+                this.renderRack();
+            }
+
+            updateNumberingButtonUI() {
+                const btn = document.getElementById('numberingBtn');
+                if (btn) {
+                    btn.innerText = this.rack.numberingAsc ? "Top (1) → Bottom" : "Bottom (1) → Top";
+                }
+            }
+
+            renderLibrary() {
+                const container = document.getElementById('libraryContainer');
+                if (!container) return;
+                container.innerHTML = this.library.map(item => `
+                    <div draggable="true" ondragstart="app.onLibraryDragStart(event, '${item.id}')" class="bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3 transition flex items-center justify-between gap-3 group cursor-grab active:cursor-grabbing">
+                        <div class="flex items-center gap-3 min-w-0 pointer-events-none">
+                            <div class="w-8 h-8 rounded-lg bg-${this.getColorBg(item.color)} flex items-center justify-center text-white shrink-0 shadow">
+                                <i data-lucide="${this.getIconName(item.color)}" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-xs font-semibold text-slate-200 truncate">${item.name}</h4>
+                                <p class="text-[10px] text-slate-400 truncate">${item.model} • ${item.height}U (${item.width}%)</p>
+                            </div>
+                        </div>
+                        <button onclick="app.quickPlaceTemplate('${item.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition shrink-0 flex items-center gap-1">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Add
+                        </button>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            }
+
+            getColorBg(color) {
+                switch(color) {
+                    case 'blue': return 'blue-600';
+                    case 'emerald': return 'emerald-600';
+                    case 'amber': return 'amber-600';
+                    case 'purple': return 'purple-600';
+                    case 'zinc': return 'slate-600';
+                    default: return 'slate-700';
+                }
+            }
+
+            getIconName(color) {
+                switch(color) {
+                    case 'blue': return 'cpu';
+                    case 'emerald': return 'server';
+                    case 'amber': return 'hard-drive';
+                    case 'purple': return 'shield';
+                    case 'zinc': return 'sliders';
+                    default: return 'box';
+                }
+            }
+
+            onLibraryDragStart(e, tplId) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'template', id: tplId }));
+            }
+
+            onExistingItemDragStart(e, u, col) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'existing', u: u, col: col }));
+            }
+
+            onDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            }
+
+            onDragEnter(e, targetEl) {
+                e.preventDefault();
+                targetEl.classList.add('drag-over');
+            }
+
+            onDragLeave(e, targetEl) {
+                targetEl.classList.remove('drag-over');
+            }
+
+            onDrop(e, targetU, targetCol, targetEl) {
+                e.preventDefault();
+                targetEl.classList.remove('drag-over');
+
+                const rawData = e.dataTransfer.getData('text/plain');
+                if (!rawData) return;
+
+                try {
+                    const data = JSON.parse(rawData);
+
+                    if (data.type === 'template') {
+                        const tpl = this.library.find(t => t.id === data.id);
+                        if (!tpl) return;
+
+                        let slotKey = `${targetU}_${targetCol}`;
+                        if (tpl.width === 100) {
+                            slotKey = `${targetU}_0`;
+                        }
+
+                        this.removeItemAtKey(slotKey);
+
+                        const newItem = {
+                            id: 'eq_' + Date.now(),
+                            name: tpl.name,
+                            model: tpl.model,
+                            height: tpl.height,
+                            width: tpl.width,
+                            color: tpl.color,
+                            ip: tpl.ip,
+                            subnet: tpl.subnet,
+                            url: tpl.url,
+                            notes: tpl.notes,
+                            subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                        };
+
+                        this.rack.items[slotKey] = newItem;
+                    } else if (data.type === 'existing') {
+                        const srcKey = `${data.u}_${data.col}`;
+                        const item = this.rack.items[srcKey];
+                        if (!item) return;
+
+                        let destKey = `${targetU}_${targetCol}`;
+                        if (item.width === 100) {
+                            destKey = `${targetU}_0`;
+                        }
+
+                        if (srcKey === destKey) return;
+
+                        const targetItem = this.rack.items[destKey];
+                        delete this.rack.items[srcKey];
+                        if (targetItem) {
+                            this.rack.items[srcKey] = targetItem;
+                        }
+                        this.rack.items[destKey] = item;
+                    }
+
+                    this.saveToLocalStorage();
+                    this.renderRack();
+                    this.updateStats();
+                } catch (err) {
+                    console.error("Drop handling error", err);
+                }
+            }
+
+            getMaxColsForWidth(standard) {
+                if (standard === '19') return 4;
+                if (standard === '10') return 2;
+                return 1;
+            }
+
+            removeItemAtKey(key) {
+                if (this.rack.items[key]) {
+                    delete this.rack.items[key];
+                }
+            }
+
+            quickPlaceTemplate(tplId) {
+                const tpl = this.library.find(t => t.id === tplId);
+                if (!tpl) return;
+
+                const maxCols = this.getMaxColsForWidth(this.rack.standard);
+                const slots = this.generateUList();
+
+                let placed = false;
+                for (let i = 0; i < slots.length; i++) {
+                    const u = slots[i];
+                    if (tpl.width === 100) {
+                        const key = `${u}_0`;
+                        if (!this.rack.items[key]) {
+                            this.rack.items[key] = {
+                                id: 'eq_' + Date.now(),
+                                name: tpl.name,
+                                model: tpl.model,
+                                height: tpl.height,
+                                width: tpl.width,
+                                color: tpl.color,
+                                ip: tpl.ip,
+                                subnet: tpl.subnet,
+                                url: tpl.url,
+                                notes: tpl.notes,
+                                subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                            };
+                            placed = true;
+                            break;
+                        }
+                    } else {
+                        for (let c = 0; c < maxCols; c++) {
+                            const key = `${u}_${c}`;
+                            if (!this.rack.items[key]) {
+                                this.rack.items[key] = {
+                                    id: 'eq_' + Date.now(),
+                                    name: tpl.name,
+                                    model: tpl.model,
+                                    height: tpl.height,
+                                    width: tpl.width,
+                                    color: tpl.color,
+                                    ip: tpl.ip,
+                                    subnet: tpl.subnet,
+                                    url: tpl.url,
+                                    notes: tpl.notes,
+                                    subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                                };
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (placed) break;
+                    }
+                }
+
+                if (!placed) {
+                    alert("Rack is completely full! Cannot add more equipment.");
+                    return;
+                }
+
+                this.saveToLocalStorage();
+                this.renderRack();
+                this.updateStats();
+            }
+
+            generateUList() {
+                const list = [];
+                const maxU = this.rack.height;
+                if (this.rack.numberingAsc) {
+                    for (let u = 0.5; u <= maxU; u += 0.5) {
+                        list.push(Math.round(u * 10) / 10);
+                    }
+                } else {
+                    for (let u = maxU; u >= 0.5; u -= 0.5) {
+                        list.push(Math.round(u * 10) / 10);
+                    }
+                }
+                return list;
+            }
+
+            renderRack() {
+                const listEl = document.getElementById('rackUnitsList');
+                if (!listEl) return;
+                let html = '';
+
+                const uOrder = this.generateUList();
+                const maxCols = this.getMaxColsForWidth(this.rack.standard);
+
+                const coveredSlots = new Set();
+                Object.keys(this.rack.items).forEach(key => {
+                    const [uStr, colStr] = key.split('_');
+                    const startU = parseFloat(uStr);
+                    const item = this.rack.items[key];
+                    if (item && item.height > 0.5) {
+                        const halfSteps = Math.round(item.height * 2);
+                        for (let i = 1; i < halfSteps; i++) {
+                            const spannedU = startU + (i * 0.5);
+                            if (item.width === 100) {
+                                for (let c = 0; c < maxCols; c++) {
+                                    coveredSlots.add(`${spannedU}_${c}`);
+                                }
+                            } else {
+                                coveredSlots.add(`${spannedU}_${colStr}`);
+                            }
+                        }
+                    }
+                });
+
+                uOrder.forEach(u => {
+                    const isHalfU = u % 1 !== 0;
+                    const rowHeightClass = isHalfU ? 'h-7' : 'h-9';
+                    
+                    html += `
+                        <div class="flex items-center gap-2 group/row relative">
+                            <div class="w-10 text-right font-mono text-[11px] ${isHalfU ? 'text-slate-600 font-normal' : 'text-slate-400 font-bold'} shrink-0">
+                                ${u}U
+                            </div>
+                            <div class="flex-1 grid grid-cols-${maxCols} gap-1.5 relative">
+                    `;
+
+                    for (let col = 0; col < maxCols; col++) {
+                        const key = `${u}_${col}`;
+                        const item = this.rack.items[key];
+
+                        if (item) {
+                            const colorClasses = this.getItemColorStyles(item.color);
+                            const widthSpanClass = item.width === 100 && maxCols > 1 ? `col-span-${maxCols}` : '';
+                            const halfSteps = Math.round(item.height * 2);
+                            const approxHeightPx = (halfSteps * 32) + ((halfSteps - 1) * 4) - 4;
+
+                            html += `
+                                <div draggable="true" ondragstart="app.onExistingItemDragStart(event, ${u}, ${col})" ondragover="app.onDragOver(event)" ondragenter="app.onDragEnter(event, this)" ondragleave="app.onDragLeave(event, this)" ondrop="app.onDrop(event, ${u}, ${col}, this)" onclick="app.inspectItem('${u}', ${col})" style="height: ${approxHeightPx}px; z-index: 20;" class="${widthSpanClass} ${colorClasses} rounded-lg p-2 cursor-grab active:cursor-grabbing shadow-lg hover:brightness-110 transition border flex flex-col justify-between absolute inset-x-0 top-0 overflow-hidden group">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-white/20"></div>
+                                    <div class="flex items-center justify-between min-w-0 pl-2 pointer-events-none">
+                                        <div class="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                                            <span>${item.name}</span>
+                                            ${item.subItems && item.subItems.length > 0 ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-black/30 text-emerald-300 border border-emerald-500/30">${item.subItems.length} nodes</span>` : ''}
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-slate-300 pointer-events-none">${item.height}U</span>
+                                            <button onclick="event.stopPropagation(); app.removeItem('${u}', ${col})" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 p-1 rounded transition">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="pl-2 pointer-events-none space-y-0.5">
+                                        <div class="text-[10px] text-slate-300 truncate">${item.model} ${item.ip ? '• ' + item.ip : ''}</div>
+                                        ${item.notes ? `<div class="text-[9px] text-slate-400 truncate italic">${item.notes}</div>` : ''}
+                                        ${item.subItems && item.subItems.length > 0 ? `<div class="text-[9px] text-emerald-300 font-mono truncate">Sub-nodes: ${item.subItems.map(s => s.name).join(', ')}</div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        } else if (coveredSlots.has(key)) {
+                            html += `<div class="pointer-events-none opacity-0 ${rowHeightClass}"></div>`;
+                        } else {
+                            html += `
+                                <div ondragover="app.onDragOver(event)" ondragenter="app.onDragEnter(event, this)" ondragleave="app.onDragLeave(event, this)" ondrop="app.onDrop(event, ${u}, ${col}, this)" onclick="app.openEquipmentModalForSlot('${u}', ${col})" class="${rowHeightClass} bg-slate-900/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-blue-500/50 rounded-lg flex items-center justify-center px-3 cursor-pointer transition group">
+                                    <span class="text-[10px] text-slate-600 group-hover:text-blue-400 flex items-center gap-1 transition">
+                                        <i data-lucide="plus" class="w-3 h-3 opacity-0 group-hover:opacity-100"></i> ${maxCols > 1 ? 'Slot ' + (col+1) : (isHalfU ? '0.5U Slot' : 'Empty (' + u + 'U)')}
+                                    </span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                listEl.innerHTML = html;
+                lucide.createIcons();
+            }
+
+            getItemColorStyles(color) {
+                switch(color) {
+                    case 'blue': return 'bg-blue-900/90 border-blue-600/70 text-blue-100';
+                    case 'emerald': return 'bg-emerald-950/90 border-emerald-700/70 text-emerald-100';
+                    case 'amber': return 'bg-amber-950/90 border-amber-700/70 text-amber-100';
+                    case 'purple': return 'bg-purple-950/90 border-purple-700/70 text-purple-100';
+                    case 'zinc': return 'bg-slate-800 border-slate-600 text-slate-100';
+                    default: return 'bg-slate-900 border-slate-700 text-slate-100';
+                }
+            }
+
+            updateStats() {
+                let count = 0;
+                let usedU = 0;
+                Object.keys(this.rack.items).forEach(key => {
+                    const item = this.rack.items[key];
+                    if (item) {
+                        usedU += item.height;
+                        count++;
+                    }
+                });
+                const totalU = this.rack.height;
+                const pct = Math.min(100, Math.round((usedU / totalU) * 100));
+                const capText = document.getElementById('rackCapacityText');
+                const devCount = document.getElementById('rackDeviceCount');
+                if (capText) capText.innerText = `${usedU.toFixed(1)}U / ${totalU}U (${pct}%)`;
+                if (devCount) devCount.innerText = `${count} units`;
+            }
+
+            triggerPrint() {
+                const rackFrameEl = document.getElementById('rackFrame');
+                // Select the header (adjust ID if your header has a specific ID like 'main-header')
+                const headerEl = document.querySelector('header'); 
+                const printTarget = document.getElementById('printTargetContainer');
+
+                if (printTarget) {
+                    printTarget.innerHTML = ''; // Clear previous content
+                    
+                    // Only append the core elements to the print container
+                    if (rackFrameEl) {
+                        const clonedFrame = rackFrameEl.cloneNode(true);
+                        printTarget.appendChild(clonedFrame);
+                    }
+
+                    if (headerEl && headerEl !== rackFrameEl) {
+                        const clonedHeader = headerEl.cloneNode(true);
+                        // Insert the header at the top of the print container
+                        printTarget.prepend(clonedHeader);
+                    }
+                }
+
+                // Short delay to ensure styles and clones are processed before the print dialog opens
+                setTimeout(() => {
+                    window.print();
+                }, 250);
+            }
+
+            openEquipmentModalForSlot(u, col) {
+                document.getElementById('editEquipmentId').value = '';
+                document.getElementById('targetSlotU').value = u;
+                document.getElementById('targetSlotCol').value = col;
+                document.getElementById('modalTitle').innerHTML = `<i data-lucide="server" class="w-5 h-5 text-blue-400"></i> Mount Equipment at ${u}U (Col ${col+1})`;
+                document.getElementById('equipmentForm').reset();
+                document.getElementById('subItemsContainer').innerHTML = '';
+                document.getElementById('equipmentModal').classList.remove('hidden');
+                lucide.createIcons();
+            }
+
+            openEquipmentModal() {
+                this.openEquipmentModalForSlot(1, 0);
+            }
+
+            closeEquipmentModal() {
+                document.getElementById('equipmentModal').classList.add('hidden');
+            }
+
+            addSubItemField(sub = { name: '', ip: '', role: '' }) {
+                const container = document.getElementById('subItemsContainer');
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 sub-item-row";
+                div.innerHTML = `
+                    <input type="text" placeholder="Node Name" value="${sub.name || ''}" class="sub-name flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                    <input type="text" placeholder="IP Address" value="${sub.ip || ''}" class="sub-ip w-28 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500">
+                    <input type="text" placeholder="Role / OS" value="${sub.role || ''}" class="sub-role flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                    <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-400 p-1 rounded transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+                lucide.createIcons();
+            }
+
+            saveEquipmentForm(e) {
+                e.preventDefault();
+                const targetU = document.getElementById('targetSlotU').value;
+                const targetCol = document.getElementById('targetSlotCol').value;
+                const editId = document.getElementById('editEquipmentId').value;
+
+                const subItems = [];
+                document.querySelectorAll('.sub-item-row').forEach(row => {
+                    const name = row.querySelector('.sub-name').value.trim();
+                    const ip = row.querySelector('.sub-ip').value.trim();
+                    const role = row.querySelector('.sub-role').value.trim();
+                    if (name || ip) {
+                        subItems.push({ name, ip, role });
+                    }
+                });
+
+                const newItem = {
+                    id: editId || ('eq_' + Date.now()),
+                    name: document.getElementById('eqName').value,
+                    model: document.getElementById('eqModel').value,
+                    height: parseFloat(document.getElementById('eqHeight').value),
+                    width: parseInt(document.getElementById('eqWidth').value),
+                    color: document.getElementById('eqColor').value,
+                    ip: document.getElementById('eqIp').value,
+                    subnet: document.getElementById('eqSubnet').value,
+                    url: document.getElementById('eqUrl').value,
+                    notes: document.getElementById('eqNotes').value,
+                    subItems: subItems
+                };
+
+                if (editId) {
+                    Object.keys(this.rack.items).forEach(key => {
+                        if (this.rack.items[key].id === editId) {
+                            delete this.rack.items[key];
+                        }
+                    });
+                }
+
+                const destKey = newItem.width === 100 ? `${targetU}_0` : `${targetU}_${targetCol}`;
+                this.rack.items[destKey] = newItem;
+
+                this.saveToLocalStorage();
+                this.closeEquipmentModal();
+                this.renderRack();
+                this.updateStats();
+            }
+
+            inspectItem(u, col) {
+                const key = `${u}_${col}`;
+                const item = this.rack.items[key];
+                if (!item) return;
+
+                const contentEl = document.getElementById('inspectContent');
+                contentEl.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono text-slate-400">Rack Position</span>
+                            <span class="text-xs font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">${u}U (${item.height}U Tall, Col ${col+1})</span>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-white">${item.name}</h4>
+                            <p class="text-xs text-slate-400">${item.model || 'No model specified'}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-xs">
+                            <div>
+                                <span class="text-slate-400 block text-[10px]">PRIMARY IP</span>
+                                <span class="font-mono text-slate-200">${item.ip || 'None'}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px]">SUBNET / VLAN</span>
+                                <span class="font-mono text-slate-200">${item.subnet || 'None'}</span>
+                            </div>
+                        </div>
+                        ${item.url ? `
+                            <div>
+                                <span class="text-slate-400 block text-[10px] mb-1">MANAGEMENT URL</span>
+                                <a href="${item.url}" target="_blank" class="text-blue-400 hover:text-blue-300 font-mono text-xs underline flex items-center gap-1 break-all">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i> ${item.url}
+                                </a>
+                            </div>
+                        ` : ''}
+                        ${item.notes ? `
+                            <div>
+                                <span class="text-slate-400 block text-[10px] mb-1">NOTES / PURPOSE</span>
+                                <p class="text-xs text-slate-300 bg-slate-900 p-2.5 rounded-xl border border-slate-800 leading-relaxed">${item.notes}</p>
+                            </div>
+                        ` : ''}
+                        ${item.subItems && item.subItems.length > 0 ? `
+                            <div>
+                                <span class="text-slate-400 block text-[10px] mb-1.5">SUB-DEVICES / CLUSTER NODES (${item.subItems.length})</span>
+                                <div class="bg-slate-900 rounded-xl p-2 border border-slate-800 space-y-1.5 max-h-40 overflow-y-auto">
+                                    ${item.subItems.map(sub => `
+                                        <div class="flex items-center justify-between text-xs bg-slate-950 p-2 rounded-lg border border-slate-800/60">
+                                            <div>
+                                                <span class="font-semibold text-slate-200">${sub.name}</span>
+                                                <span class="text-[10px] text-slate-400 ml-1">(${sub.role || 'Node'})</span>
+                                            </div>
+                                            <span class="font-mono text-emerald-400 text-[11px]">${sub.ip || ''}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                document.getElementById('inspectEditBtn').setAttribute('onclick', `app.editItemFromInspect('${u}', ${col})`);
+                document.getElementById('inspectDeleteBtn').setAttribute('onclick', `app.removeItemFromInspect('${u}', ${col})`);
+                document.getElementById('inspectModal').classList.remove('hidden');
+                lucide.createIcons();
+            }
+
+            closeInspectModal() {
+                document.getElementById('inspectModal').classList.add('hidden');
+            }
+
+            editItemFromInspect(u, col) {
+                const key = `${u}_${col}`;
+                const item = this.rack.items[key];
+                if (!item) return;
+                this.closeInspectModal();
+
+                document.getElementById('editEquipmentId').value = item.id;
+                document.getElementById('targetSlotU').value = u;
+                document.getElementById('targetSlotCol').value = col;
+                document.getElementById('modalTitle').innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i> Edit Equipment at ${u}U`;
+
+                document.getElementById('eqName').value = item.name || '';
+                document.getElementById('eqModel').value = item.model || '';
+                document.getElementById('eqHeight').value = item.height || 1;
+                document.getElementById('eqWidth').value = item.width || 100;
+                document.getElementById('eqColor').value = item.color || 'slate';
+                document.getElementById('eqIp').value = item.ip || '';
+                document.getElementById('eqSubnet').value = item.subnet || '';
+                document.getElementById('eqUrl').value = item.url || '';
+                document.getElementById('eqNotes').value = item.notes || '';
+
+                const subContainer = document.getElementById('subItemsContainer');
+                subContainer.innerHTML = '';
+                if (item.subItems && item.subItems.length > 0) {
+                    item.subItems.forEach(sub => this.addSubItemField(sub));
+                }
+
+                document.getElementById('equipmentModal').classList.remove('hidden');
+                lucide.createIcons();
+            }
+
+            removeItem(u, col) {
+                const key = `${u}_${col}`;
+                delete this.rack.items[key];
+                this.saveToLocalStorage();
+                this.renderRack();
+                this.updateStats();
+            }
+
+            removeItemFromInspect(u, col) {
+                if (confirm("Remove this equipment from the rack?")) {
+                    this.removeItem(u, col);
+                    this.closeInspectModal();
+                }
+            }
+
+            openExportModal() {
+                document.getElementById('exportJsonArea').value = JSON.stringify(this.rack, null, 2);
+                document.getElementById('exportModal').classList.remove('hidden');
+            }
+
+            closeExportModal() {
+                document.getElementById('exportModal').classList.add('hidden');
+            }
+
+            downloadJsonFile() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.rack, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `${this.rack.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_rack.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            }
+
+            uploadJsonFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (parsed && parsed.height && parsed.items) {
+                            this.rack = parsed;
+                            document.getElementById('rackNameInput').value = this.rack.name || "Server Rack";
+                            document.getElementById('rackStandardSelect').value = this.rack.standard || "10";
+                            document.getElementById('rackHeightSelect').value = this.rack.height || 9;
+                            this.updateRackMeta(this.rack.name);
+                            this.updateNumberingButtonUI();
+                            this.saveToLocalStorage();
+                            this.renderRack();
+                            this.updateStats();
+                            this.closeExportModal();
+                            alert("Rack configuration successfully loaded from file!");
+                        } else {
+                            alert("Invalid JSON format in uploaded file.");
+                        }
+                    } catch (err) {
+                        alert("Error parsing JSON file: " + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            importJsonData() {
+                try {
+                    const parsed = JSON.parse(document.getElementById('exportJsonArea').value);
+                    if (parsed && parsed.height && parsed.items) {
+                        this.rack = parsed;
+                        document.getElementById('rackNameInput').value = this.rack.name || "Server Rack";
+                        document.getElementById('rackStandardSelect').value = this.rack.standard || "10";
+                        document.getElementById('rackHeightSelect').value = this.rack.height || 9;
+                        this.updateRackMeta(this.rack.name);
+                        this.updateNumberingButtonUI();
+                        this.saveToLocalStorage();
+                        this.renderRack();
+                        this.updateStats();
+                        this.closeExportModal();
+                        alert("Rack configuration imported successfully!");
+                    } else {
+                        alert("Invalid JSON format for rack configuration.");
+                    }
+                } catch (e) {
+                    alert("Error parsing JSON: " + e.message);
+                }
+            }
+        }
+
+        let app;
+        window.onload = function() {
+            app = new RackApp();
+        };
+    </script>
+</body>
+</html>
