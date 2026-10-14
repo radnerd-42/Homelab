@@ -41,55 +41,48 @@
         }
 
         /* Printer-friendly styling: converts dark mode screen elements into crisp, high-contrast light theme for paper/PDF output */
-        /* Print-specific styles */
         @media print {
-                /* YOUR NEW CODE GOES HERE */
-                /* 1. FORCE LIGHT MODE FOR PRINT */
-                body, #print-wrapper, .bg-cardbg, .bg-darkbg, .bg-slate-900, 
-                .bg-slate-800, .bg-slate-950, .bg-black\/30, .bg-black\/40 {
-                    background-color: #ffffff !important;
-                    background: #ffffff !important;
-                    color: #000000 !important;
-                }
-
-                /* Force text colors to be black for all items */
-                .text-white, .text-slate-100, .text-slate-200, 
-                .text-slate-300, .text-slate-400, .text-slate-500, 
-                .text-slate-600, .text-slate-700 {
-                    color: #000000 !important;
-                }
-
-                /* Ensure borders are visible but not 'dark' (standard grey) */
-                .border-slate-800, .border-slate-900, .border-slate-700 {
-                    border-color: #d1d5db !important; 
-                }
-
-                /* 2. HIDE UI ELEMENTS */
-                #libraryContainer, 
-                .lg\:col-span-5, 
-                .no-print, 
-                button, 
-                nav, 
-                footer {
-                    display: none !important;
-                }
-
-                /* 3. LAYOUT FIXES FOR PRINT */
-                #print-wrapper {
-                    position: absolute !important;
-                    left: 0 !important;
-                    top: 0 !important;
-                    width: 100% !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                }
-
-                #printTargetContainer {
-                    width: 100%;
-                    margin: 0;
-                    padding: 0;
-                }
+            body, #print-wrapper, .bg-cardbg, .bg-darkbg, .bg-slate-900, 
+            .bg-slate-800, .bg-slate-950, .bg-black\/30, .bg-black\/40 {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
             }
+
+            .text-white, .text-slate-100, .text-slate-200, 
+            .text-slate-300, .text-slate-400, .text-slate-500, 
+            .text-slate-600, .text-slate-700 {
+                color: #000000 !important;
+            }
+
+            .border-slate-800, .border-slate-900, .border-slate-700 {
+                border-color: #d1d5db !important; 
+            }
+
+            #libraryContainer, 
+            .lg\:col-span-5, 
+            .no-print, 
+            button, 
+            nav, 
+            footer {
+                display: none !important;
+            }
+
+            #print-wrapper {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            #printTargetContainer {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
@@ -189,6 +182,19 @@
                 </div>
             </div>
 
+            <!-- Thermal & Cooling Advisor Card -->
+            <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 shadow-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="thermometer" class="w-4 h-4 text-amber-400"></i> Thermal & Cooling Advisor
+                    </h3>
+                    <span id="totalPowerBadge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">0W Total</span>
+                </div>
+                <div id="coolingRecommendationsContainer" class="space-y-2 text-xs text-slate-300 max-h-48 overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
             <!-- Equipment Library -->
             <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl">
                 <div class="flex items-center justify-between mb-4">
@@ -200,9 +206,9 @@
                     </button>
                 </div>
 
-                <p class="text-xs text-slate-400 mb-3">Drag items into rack slots. All details render directly inside the visual blocks!</p>
+                <p class="text-xs text-slate-400 mb-3">Drag items into rack slots. Power, cooling, and CFM render directly inside blocks!</p>
 
-                <div id="libraryContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                <div id="libraryContainer" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                     <!-- Populated via JS -->
                 </div>
             </div>
@@ -236,7 +242,7 @@
                         <h3 id="displayRackName" class="text-base font-bold text-white flex items-center gap-2">
                             SOHO Mini & Pi Lab <span id="displayRackStandard" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">10" Rack</span>
                         </h3>
-                        <p class="text-xs text-slate-400">With complete device metadata rendered directly inside U slots</p>
+                        <p class="text-xs text-slate-400">With complete device metadata & thermal metrics rendered directly inside U slots</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="flex items-center gap-1.5 text-xs text-slate-400">
@@ -343,14 +349,45 @@
                     </div>
                 </div>
 
+                <!-- Power & Thermal Specifications -->
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Power Consumption (Watts)</label>
+                        <input type="number" id="eqPower" min="0" value="50" placeholder="e.g. 150" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Cooling Type</label>
+                        <select id="eqCooling" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="active">Active (Forced Fans)</option>
+                            <option value="passive">Passive (Heatsink / Vented)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Airflow & Vents Direction</label>
+                        <select id="eqAirflow" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="front-to-back">Front-to-Back (Standard)</option>
+                            <option value="back-to-front">Back-to-Front</option>
+                            <option value="top">Top Vented / Exhaust</option>
+                            <option value="bottom">Bottom Intake</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Airflow Volume (CFM)</label>
+                        <input type="number" id="eqCfm" min="0" value="25" placeholder="e.g. 30" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Primary IP Address</label>
                         <input type="text" id="eqIp" placeholder="e.g. 192.168.1.50" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Subnet / VLAN</label>
-                        <input type="text" id="eqSubnet" placeholder="e.g. 192.168.1.0/24 (VLAN 10)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="eqSubnet" placeholder="e.g. 192.168.1.0/24" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
 
@@ -399,7 +436,7 @@
                 </button>
             </div>
 
-            <div id="inspectContent" class="space-y-4 text-sm">
+            <div id="inspectContent" class="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-1">
                 <!-- Populated dynamically -->
             </div>
 
@@ -470,7 +507,11 @@
                         subnet: '192.168.1.0/24',
                         url: 'https://192.168.1.100',
                         notes: 'True 2U height storage server with ZFS pool.',
-                        subItems: []
+                        subItems: [],
+                        power: 220,
+                        cooling: 'active',
+                        airflow: 'front-to-back',
+                        cfm: 55
                     },
                     {
                         id: 'tpl_half_u_pdu',
@@ -483,7 +524,11 @@
                         subnet: '192.168.1.0/24',
                         url: 'http://192.168.1.3',
                         notes: 'Smart monitored power strip occupying a half-U slot.',
-                        subItems: []
+                        subItems: [],
+                        power: 15,
+                        cooling: 'passive',
+                        airflow: 'top',
+                        cfm: 0
                     },
                     {
                         id: 'tpl_mini_pc',
@@ -496,7 +541,11 @@
                         subnet: '192.168.1.0/24',
                         url: 'https://192.168.1.50:8006',
                         notes: 'Runs Proxmox VE with Home Assistant and Pi-hole VMs.',
-                        subItems: []
+                        subItems: [],
+                        power: 45,
+                        cooling: 'active',
+                        airflow: 'back-to-front',
+                        cfm: 15
                     },
                     {
                         id: 'tpl_soho_switch',
@@ -509,7 +558,11 @@
                         subnet: '192.168.1.0/24',
                         url: 'http://192.168.1.2',
                         notes: 'Core switch connecting Mini PCs, Pi cluster, and uplink.',
-                        subItems: []
+                        subItems: [],
+                        power: 20,
+                        cooling: 'passive',
+                        airflow: 'front-to-back',
+                        cfm: 0
                     },
                     {
                         id: 'tpl_pi_cluster',
@@ -528,7 +581,11 @@
                             { name: 'pi-worker-02', ip: '192.168.1.12', role: 'Worker' },
                             { name: 'pi-worker-03', ip: '192.168.1.13', role: 'Worker' },
                             { name: 'pi-nas-node',  ip: '192.168.1.14', role: 'Storage' }
-                        ]
+                        ],
+                        power: 35,
+                        cooling: 'active',
+                        airflow: 'top',
+                        cfm: 20
                     }
                 ];
 
@@ -544,11 +601,11 @@
             }
 
             saveToLocalStorage() {
-                localStorage.setItem('rackstack_data_v8', JSON.stringify(this.rack));
+                localStorage.setItem('rackstack_data_v9', JSON.stringify(this.rack));
             }
 
             loadFromLocalStorage() {
-                const data = localStorage.getItem('rackstack_data_v8');
+                const data = localStorage.getItem('rackstack_data_v9');
                 if (data) {
                     try {
                         this.rack = JSON.parse(data);
@@ -572,15 +629,34 @@
                     height: 9,
                     numberingAsc: true,
                     items: {
-                        "0.5_0": { id: 'eq_05', name: '0.5U Micro PDU', model: 'Slim 4-Outlet', height: 0.5, width: 100, color: 'purple', ip: '192.168.1.3', subnet: '192.168.1.0/24', url: 'http://192.168.1.3', notes: 'Mounted in top half-U slot.', subItems: [] },
-                        "1_0": { id: 'eq_1', name: 'Keystone RJ45 Patch Panel', model: '12-Port Cat6', height: 1, width: 100, color: 'zinc', ip: '', subnet: '', url: '', notes: 'Terminating room ethernet drops.', subItems: [] },
-                        "2_0": { id: 'eq_2', name: '5-Port SOHO Switch', model: 'Netgear 1GbE Managed', height: 1, width: 100, color: 'blue', ip: '192.168.1.2', subnet: '192.168.1.0/24', url: 'http://192.168.1.2', notes: 'Core switch for lab devices.', subItems: [] },
-                        "3_0": { id: 'eq_3', name: 'Mini PC (Proxmox Server)', model: 'Beelink SER5', height: 1, width: 50, color: 'blue', ip: '192.168.1.50', subnet: '192.168.1.0/24', url: 'https://192.168.1.50:8006', notes: 'Main virtualization host.', subItems: [] },
-                        "3_1": { id: 'eq_3b', name: 'Mini PC (TrueNAS SCALE)', model: 'Minisforum N100', height: 1, width: 50, color: 'amber', ip: '192.168.1.51', subnet: '192.168.1.0/24', url: 'https://192.168.1.51', notes: 'NAS storage node.', subItems: [] },
-                        "4_0": { id: 'eq_4', name: '1U 5x Raspberry Pi Shelf', model: '3D Printed Rack Mount', height: 1, width: 100, color: 'emerald', ip: '192.168.1.10', subnet: '192.168.1.0/24', url: 'http://192.168.1.10', notes: 'Pi 4/5 Kubernetes cluster.', subItems: [
-                            { name: 'pi-master-01', ip: '192.168.1.10', role: 'K3s Control' },
-                            { name: 'pi-worker-01', ip: '192.168.1.11', role: 'Worker' }
-                        ]}
+                        "0.5_0": { id: 'eq_05', name: '0.5U Micro PDU', model: 'Slim 4-Outlet', height: 0.5, width: 100, color: 'purple', ip: '192.168.1.3', subnet: '192.168.1.0/24', url: 'http://192.168.1.3', notes: 'Mounted in top half-U slot.', subItems: [], power: 15, cooling: 'passive', airflow: 'top', cfm: 0 },
+                        "1_0": { id: 'eq_1', name: 'Keystone RJ45 Patch Panel', model: '12-Port Cat6', height: 1, width: 100, color: 'zinc', ip: '', subnet: '', url: '', notes: 'Terminating room ethernet drops.', subItems: [], power: 0, cooling: 'passive', airflow: 'front-to-back', cfm: 0 },
+                        "2_0": { id: 'eq_2', name: '5-Port SOHO Switch', model: 'Netgear 1GbE Managed', height: 1, width: 100, color: 'blue', ip: '192.168.1.2', subnet: '192.168.1.0/24', url: 'http://192.168.1.2', notes: 'Core switch for lab devices.', subItems: [], power: 20, cooling: 'passive', airflow: 'front-to-back', cfm: 0 },
+                        "3_0": { id: 'eq_3', name: 'Mini PC (Proxmox Server)', model: 'Beelink SER5', height: 1, width: 50, color: 'blue', ip: '192.168.1.50', subnet: '192.168.1.0/24', url: 'https://192.168.1.50:8006', notes: 'Main virtualization host.', subItems: [], power: 45, cooling: 'active', airflow: 'back-to-front', cfm: 15 },
+                        "3_1": { id: 'eq_3b', name: 'Mini PC (TrueNAS SCALE)', model: 'Minisforum N100', height: 1, width: 50, color: 'amber', ip: '192.168.1.51', subnet: '192.168.1.0/24', url: 'https://192.168.1.51', notes: 'NAS storage node.', subItems: [], power: 35, cooling: 'active', airflow: 'back-to-front', cfm: 12 },
+                        "4_0": { 
+                            id: 'eq_4', 
+                            name: '1U 5x Raspberry Pi Shelf', 
+                            model: '3D Printed Rack Mount', 
+                            height: 1, 
+                            width: 100, 
+                            color: 'emerald', 
+                            ip: '192.168.1.10', 
+                            subnet: '192.168.1.0/24', 
+                            url: 'http://192.168.1.10', 
+                            notes: 'Pi 4/5 Kubernetes cluster.', 
+                            subItems: [
+                                { name: 'pi-master-01', ip: '192.168.1.10', role: 'K3s Control' },
+                                { name: 'pi-worker-01', ip: '192.168.1.11', role: 'Worker' },
+                                { name: 'pi-worker-02', ip: '192.168.1.12', role: 'Worker' },
+                                { name: 'pi-worker-03', ip: '192.168.1.13', role: 'Worker' },
+                                { name: 'pi-nas-node',  ip: '192.168.1.14', role: 'Storage' }
+                            ], 
+                            power: 35, 
+                            cooling: 'active', 
+                            airflow: 'top', 
+                            cfm: 20 
+                        }
                     }
                 };
             }
@@ -656,7 +732,7 @@
                             </div>
                             <div class="min-w-0">
                                 <h4 class="text-xs font-semibold text-slate-200 truncate">${item.name}</h4>
-                                <p class="text-[10px] text-slate-400 truncate">${item.model} • ${item.height}U (${item.width}%)</p>
+                                <p class="text-[10px] text-slate-400 truncate">${item.model} • ${item.height}U (${item.width}%) • ${item.power}W</p>
                             </div>
                         </div>
                         <button onclick="app.quickPlaceTemplate('${item.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition shrink-0 flex items-center gap-1">
@@ -743,7 +819,11 @@
                             subnet: tpl.subnet,
                             url: tpl.url,
                             notes: tpl.notes,
-                            subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                            subItems: JSON.parse(JSON.stringify(tpl.subItems)),
+                            power: tpl.power ?? 50,
+                            cooling: tpl.cooling ?? 'active',
+                            airflow: tpl.airflow ?? 'front-to-back',
+                            cfm: tpl.cfm ?? 25
                         };
 
                         this.rack.items[slotKey] = newItem;
@@ -811,7 +891,11 @@
                                 subnet: tpl.subnet,
                                 url: tpl.url,
                                 notes: tpl.notes,
-                                subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                                subItems: JSON.parse(JSON.stringify(tpl.subItems)),
+                                power: tpl.power ?? 50,
+                                cooling: tpl.cooling ?? 'active',
+                                airflow: tpl.airflow ?? 'front-to-back',
+                                cfm: tpl.cfm ?? 25
                             };
                             placed = true;
                             break;
@@ -831,7 +915,11 @@
                                     subnet: tpl.subnet,
                                     url: tpl.url,
                                     notes: tpl.notes,
-                                    subItems: JSON.parse(JSON.stringify(tpl.subItems))
+                                    subItems: JSON.parse(JSON.stringify(tpl.subItems)),
+                                    power: tpl.power ?? 50,
+                                    cooling: tpl.cooling ?? 'active',
+                                    airflow: tpl.airflow ?? 'front-to-back',
+                                    cfm: tpl.cfm ?? 25
                                 };
                                 placed = true;
                                 break;
@@ -914,7 +1002,14 @@
                             const colorClasses = this.getItemColorStyles(item.color);
                             const widthSpanClass = item.width === 100 && maxCols > 1 ? `col-span-${maxCols}` : '';
                             const halfSteps = Math.round(item.height * 2);
-                            const approxHeightPx = (halfSteps * 32) + ((halfSteps - 1) * 4) - 4;
+                            let approxHeightPx = (halfSteps * 32) + ((halfSteps - 1) * 4) - 4;
+                            
+                            // Automatically expand height for multi-device shelves (e.g. 5 Pis) to fit sub-nodes cleanly
+                            if (item.subItems && item.subItems.length > 2 && item.height <= 1) {
+                                approxHeightPx = Math.max(approxHeightPx, 92);
+                            }
+
+                            const isActiveCooling = item.cooling === 'active';
 
                             html += `
                                 <div draggable="true" ondragstart="app.onExistingItemDragStart(event, ${u}, ${col})" ondragover="app.onDragOver(event)" ondragenter="app.onDragEnter(event, this)" ondragleave="app.onDragLeave(event, this)" ondrop="app.onDrop(event, ${u}, ${col}, this)" onclick="app.inspectItem('${u}', ${col})" style="height: ${approxHeightPx}px; z-index: 20;" class="${widthSpanClass} ${colorClasses} rounded-lg p-2 cursor-grab active:cursor-grabbing shadow-lg hover:brightness-110 transition border flex flex-col justify-between absolute inset-x-0 top-0 overflow-hidden group">
@@ -924,7 +1019,9 @@
                                             <span>${item.name}</span>
                                             ${item.subItems && item.subItems.length > 0 ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-black/30 text-emerald-300 border border-emerald-500/30">${item.subItems.length} nodes</span>` : ''}
                                         </div>
-                                        <div class="flex items-center gap-2 shrink-0">
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-amber-300 border border-amber-500/20 pointer-events-none">${item.power || 0}W</span>
+                                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 ${isActiveCooling ? 'text-blue-300 border border-blue-500/30' : 'text-slate-400'} pointer-events-none">${isActiveCooling ? (item.cfm || 25) + ' CFM' : 'Passive'}</span>
                                             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-slate-300 pointer-events-none">${item.height}U</span>
                                             <button onclick="event.stopPropagation(); app.removeItem('${u}', ${col})" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 p-1 rounded transition">
                                                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -933,9 +1030,17 @@
                                     </div>
                                     <div class="pl-2 pointer-events-none space-y-0.5">
                                         <div class="text-[10px] text-slate-300 truncate">${item.model} ${item.ip ? '• ' + item.ip : ''}</div>
-                                        ${item.notes ? `<div class="text-[9px] text-slate-400 truncate italic">${item.notes}</div>` : ''}
-                                        ${item.subItems && item.subItems.length > 0 ? `<div class="text-[9px] text-emerald-300 font-mono truncate">Sub-nodes: ${item.subItems.map(s => s.name).join(', ')}</div>` : ''}
                                     </div>
+                                    ${item.subItems && item.subItems.length > 0 ? `
+                                        <div class="pl-2 pr-1 mt-1 pt-1 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 gap-1 pointer-events-none">
+                                            ${item.subItems.map(sub => `
+                                                <div class="text-[9px] bg-black/40 px-1.5 py-0.5 rounded flex items-center justify-between font-mono border border-white/5">
+                                                    <span class="text-white truncate">${sub.name}</span>
+                                                    <span class="text-emerald-300 ml-1">${sub.ip}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `;
                         } else if (coveredSlots.has(key)) {
@@ -988,31 +1093,82 @@
                 const devCount = document.getElementById('rackDeviceCount');
                 if (capText) capText.innerText = `${usedU.toFixed(1)}U / ${totalU}U (${pct}%)`;
                 if (devCount) devCount.innerText = `${count} units`;
+
+                this.updateCoolingAdvisor();
+            }
+
+            updateCoolingAdvisor() {
+                const container = document.getElementById('coolingRecommendationsContainer');
+                const badge = document.getElementById('totalPowerBadge');
+                if (!container) return;
+
+                let totalPower = 0;
+                const itemsList = [];
+
+                Object.keys(this.rack.items).forEach(key => {
+                    const [uStr] = key.split('_');
+                    const u = parseFloat(uStr);
+                    const item = this.rack.items[key];
+                    if (item) {
+                        const p = parseFloat(item.power) || 0;
+                        totalPower += p;
+                        itemsList.push({ u, item, power: p });
+                    }
+                });
+
+                if (badge) badge.innerText = `${totalPower}W Total`;
+
+                let recs = [];
+
+                if (totalPower > 500) {
+                    recs.push(`⚠️ <b>High Power Density (${totalPower}W)</b>: Ensure robust room ventilation and rack exhaust fans.`);
+                } else if (totalPower > 0) {
+                    recs.push(`✅ <b>Total Thermal Load</b>: ${totalPower}W is well within normal rack operating limits.`);
+                } else {
+                    recs.push(`ℹ️ Rack is currently empty. Add equipment to calculate thermal metrics.`);
+                }
+
+                itemsList.forEach(({ u, item, power }) => {
+                    const maxU = this.rack.height;
+                    const isTop = this.rack.numberingAsc ? (u <= 2) : (u >= maxU - 1);
+
+                    if (power >= 150 && item.cooling === 'passive') {
+                        recs.push(`⚠️ <b>Hotspot Warning</b>: High-power passive device <b>${item.name}</b> (${power}W) at <b>${u}U</b> lacks active cooling. Consider moving it closer to active intake/exhaust fans or adding spacing.`);
+                    }
+
+                    if (power >= 200 && isTop && item.airflow !== 'top' && item.airflow !== 'front-to-back') {
+                        recs.push(`🔄 <b>Relocation Suggestion</b>: <b>${item.name}</b> (${power}W) near the top should be moved lower or configured with top exhaust to prevent heat buildup.`);
+                    }
+
+                    if (item.cooling === 'active' && item.cfm >= 40 && (this.rack.numberingAsc ? (u >= maxU - 1) : (u <= 2))) {
+                        recs.push(`💡 <b>Airflow Optimization</b>: High-CFM fan module <b>${item.name}</b> (${item.cfm} CFM) at <b>${u}U</b> provides strong upward airflow draft.`);
+                    }
+                });
+
+                if (recs.length === 1 && totalPower > 0) {
+                    recs.push(`✅ <b>Cooling Alignment</b>: All installed devices match their cooling and airflow thresholds well.`);
+                }
+
+                container.innerHTML = recs.map(r => `<div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed">${r}</div>`).join('');
             }
 
             triggerPrint() {
                 const rackFrameEl = document.getElementById('rackFrame');
-                // Select the header (adjust ID if your header has a specific ID like 'main-header')
                 const headerEl = document.querySelector('header'); 
                 const printTarget = document.getElementById('printTargetContainer');
 
                 if (printTarget) {
-                    printTarget.innerHTML = ''; // Clear previous content
-                    
-                    // Only append the core elements to the print container
+                    printTarget.innerHTML = '';
                     if (rackFrameEl) {
                         const clonedFrame = rackFrameEl.cloneNode(true);
                         printTarget.appendChild(clonedFrame);
                     }
-
                     if (headerEl && headerEl !== rackFrameEl) {
                         const clonedHeader = headerEl.cloneNode(true);
-                        // Insert the header at the top of the print container
                         printTarget.prepend(clonedHeader);
                     }
                 }
 
-                // Short delay to ensure styles and clones are processed before the print dialog opens
                 setTimeout(() => {
                     window.print();
                 }, 250);
@@ -1024,6 +1180,10 @@
                 document.getElementById('targetSlotCol').value = col;
                 document.getElementById('modalTitle').innerHTML = `<i data-lucide="server" class="w-5 h-5 text-blue-400"></i> Mount Equipment at ${u}U (Col ${col+1})`;
                 document.getElementById('equipmentForm').reset();
+                document.getElementById('eqPower').value = 50;
+                document.getElementById('eqCooling').value = 'active';
+                document.getElementById('eqAirflow').value = 'front-to-back';
+                document.getElementById('eqCfm').value = 25;
                 document.getElementById('subItemsContainer').innerHTML = '';
                 document.getElementById('equipmentModal').classList.remove('hidden');
                 lucide.createIcons();
@@ -1076,6 +1236,10 @@
                     height: parseFloat(document.getElementById('eqHeight').value),
                     width: parseInt(document.getElementById('eqWidth').value),
                     color: document.getElementById('eqColor').value,
+                    power: parseFloat(document.getElementById('eqPower').value) || 0,
+                    cooling: document.getElementById('eqCooling').value,
+                    airflow: document.getElementById('eqAirflow').value,
+                    cfm: parseFloat(document.getElementById('eqCfm').value) || 0,
                     ip: document.getElementById('eqIp').value,
                     subnet: document.getElementById('eqSubnet').value,
                     url: document.getElementById('eqUrl').value,
@@ -1118,12 +1282,22 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-xs">
                             <div>
-                                <span class="text-slate-400 block text-[10px]">PRIMARY IP</span>
-                                <span class="font-mono text-slate-200">${item.ip || 'None'}</span>
+                                <span class="text-slate-400 block text-[10px]">POWER CONSUMPTION</span>
+                                <span class="font-mono text-amber-400 font-bold">${item.power || 0} Watts</span>
                             </div>
                             <div>
-                                <span class="text-slate-400 block text-[10px]">SUBNET / VLAN</span>
-                                <span class="font-mono text-slate-200">${item.subnet || 'None'}</span>
+                                <span class="text-slate-400 block text-[10px]">COOLING & AIRFLOW</span>
+                                <span class="font-mono text-slate-200 capitalize">${item.cooling} (${item.cooling === 'active' ? (item.cfm || 25) + ' CFM' : 'Passive'})</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-slate-400 block text-[10px]">AIRFLOW DIRECTION</span>
+                                <span class="font-mono text-slate-200 capitalize">${item.airflow || 'front-to-back'}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px]">PRIMARY IP</span>
+                                <span class="font-mono text-slate-200">${item.ip || 'None'}</span>
                             </div>
                         </div>
                         ${item.url ? `
@@ -1185,6 +1359,10 @@
                 document.getElementById('eqHeight').value = item.height || 1;
                 document.getElementById('eqWidth').value = item.width || 100;
                 document.getElementById('eqColor').value = item.color || 'slate';
+                document.getElementById('eqPower').value = item.power ?? 50;
+                document.getElementById('eqCooling').value = item.cooling || 'active';
+                document.getElementById('eqAirflow').value = item.airflow || 'front-to-back';
+                document.getElementById('eqCfm').value = item.cfm ?? 25;
                 document.getElementById('eqIp').value = item.ip || '';
                 document.getElementById('eqSubnet').value = item.subnet || '';
                 document.getElementById('eqUrl').value = item.url || '';
